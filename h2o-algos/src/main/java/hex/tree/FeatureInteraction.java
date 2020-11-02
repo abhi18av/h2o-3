@@ -10,8 +10,8 @@ public class FeatureInteraction {
     public int depth;
     public double gain;
     public double cover;
-    public double FScore;
-    public double FScoreWeighted;
+    public double fScore;
+    public double fScoreWeighted;
     public double averageFScoreWeighted;
     public double averageGain;
     public double expectedGain;
@@ -28,20 +28,20 @@ public class FeatureInteraction {
     
     public SplitValueHistogram splitValueHistogram;
     
-    public FeatureInteraction(List<SharedTreeNode> interactionPath, double gain, double cover, double pathProba, double depth, double FScore, double treeIndex) {
-        this.name = InteractionPathToStr(interactionPath, false, true);
+    public FeatureInteraction(List<SharedTreeNode> interactionPath, double gain, double cover, double pathProba, double depth, double fScore, double treeIndex) {
+        this.name = interactionPathToStr(interactionPath, false, true);
         this.depth = interactionPath.size() - 1;
         this.gain = gain;
         this.cover = cover;
-        this.FScore = FScore;
-        this.FScoreWeighted = pathProba;
-        this.averageFScoreWeighted = this.FScoreWeighted / this.FScore;
-        this.averageGain = this.gain / this.FScore;
+        this.fScore = fScore;
+        this.fScoreWeighted = pathProba;
+        this.averageFScoreWeighted = this.fScoreWeighted / this.fScore;
+        this.averageGain = this.gain / this.fScore;
         this.expectedGain = this.gain * pathProba;
         this.treeIndex = treeIndex;
         this.treeDepth = depth;
-        this.averageTreeIndex = this.treeIndex / this.FScore;
-        this.averageTreeDepth = this.treeDepth / this.FScore;
+        this.averageTreeIndex = this.treeIndex / this.fScore;
+        this.averageTreeDepth = this.treeDepth / this.fScore;
         this.hasLeafStatistics = false;
         this.splitValueHistogram = new SplitValueHistogram();
         
@@ -50,7 +50,7 @@ public class FeatureInteraction {
         }
     }
 
-    public static String InteractionPathToStr(final List<SharedTreeNode> interactionPath, final boolean encodePath, final boolean sortByFeature) {
+    public static String interactionPathToStr(final List<SharedTreeNode> interactionPath, final boolean encodePath, final boolean sortByFeature) {
         if (sortByFeature && !encodePath) {
             interactionPath.sort(Comparator.comparing(SharedTreeNode::getColName));
         }

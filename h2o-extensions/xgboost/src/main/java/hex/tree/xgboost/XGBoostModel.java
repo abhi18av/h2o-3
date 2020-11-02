@@ -808,7 +808,7 @@ public class XGBoostModel extends Model<XGBoostModel, XGBoostModel.XGBoostParame
       List<SharedTreeNode> interactionPath = new ArrayList<>();
       Set<String> memo = new HashSet<>();
       
-      CollectFeatureInteractions(tree.rootNode, interactionPath, 0, 0, 1, 0, 0,
+      collectFeatureInteractions(tree.rootNode, interactionPath, 0, 0, 1, 0, 0,
               currentTreeFeatureInteractions, memo, maxInteractionDepth, maxTreeDepth, maxDeepening, i);
       treesFeatureInteractions[i] = currentTreeFeatureInteractions;
     }
@@ -823,9 +823,10 @@ public class XGBoostModel extends Model<XGBoostModel, XGBoostModel.XGBoostParame
   }
   
   @Override
-  public void CollectFeatureInteractions(SharedTreeNode node, List<SharedTreeNode> interactionPath,
-                                  double currentGain, double currentCover, double pathProba, int depth, int deepening,
-                                  Map<String, FeatureInteraction> featureInteractions, Set<String> memo, int maxInteractionDepth, int maxTreeDepth, int maxDeepening, int treeIndex) {
+  public void collectFeatureInteractions(SharedTreeNode node, List<SharedTreeNode> interactionPath,
+                                         double currentGain, double currentCover, double pathProba, int depth, int deepening,
+                                         Map<String, FeatureInteraction> featureInteractions, Set<String> memo, int maxInteractionDepth, 
+                                         int maxTreeDepth, int maxDeepening, int treeIndex) {
 
     if (node.isLeaf() || depth == maxTreeDepth) {
       return;
@@ -841,13 +842,13 @@ public class XGBoostModel extends Model<XGBoostModel, XGBoostModel.XGBoostParame
     FeatureInteraction featureInteraction = new FeatureInteraction(interactionPath, currentGain, currentCover, pathProba, depth, 1, treeIndex);
 
     if ((depth < maxDeepening) || (maxDeepening < 0)) {
-      CollectFeatureInteractions(node.getLeftChild(), new ArrayList<>(), 0, 0, ppl, depth + 1,
+      collectFeatureInteractions(node.getLeftChild(), new ArrayList<>(), 0, 0, ppl, depth + 1,
               deepening + 1, featureInteractions, memo, maxInteractionDepth, maxTreeDepth, maxDeepening, treeIndex);
-      CollectFeatureInteractions(node.getRightChild(), new ArrayList<>(), 0, 0, ppr, depth + 1,
+      collectFeatureInteractions(node.getRightChild(), new ArrayList<>(), 0, 0, ppr, depth + 1,
               deepening + 1, featureInteractions, memo, maxInteractionDepth, maxTreeDepth, maxDeepening, treeIndex);
     }
 
-    String path = FeatureInteraction.InteractionPathToStr(interactionPath, true, true);
+    String path = FeatureInteraction.interactionPathToStr(interactionPath, true, true);
 
     FeatureInteraction foundFI = featureInteractions.get(featureInteraction.name);
     if (foundFI == null) {
@@ -860,15 +861,15 @@ public class XGBoostModel extends Model<XGBoostModel, XGBoostModel.XGBoostParame
       memo.add(path);
       foundFI.gain += currentGain;
       foundFI.cover += currentCover;
-      foundFI.FScore += 1;
-      foundFI.FScoreWeighted += pathProba;
-      foundFI.averageFScoreWeighted = foundFI.FScoreWeighted / foundFI.FScore;
-      foundFI.averageGain = foundFI.gain / foundFI.FScore;
+      foundFI.fScore += 1;
+      foundFI.fScoreWeighted += pathProba;
+      foundFI.averageFScoreWeighted = foundFI.fScoreWeighted / foundFI.fScore;
+      foundFI.averageGain = foundFI.gain / foundFI.fScore;
       foundFI.expectedGain += currentGain * pathProba;
       foundFI.treeDepth += depth;
-      foundFI.averageTreeDepth = foundFI.treeDepth / foundFI.FScore;
+      foundFI.averageTreeDepth = foundFI.treeDepth / foundFI.fScore;
       foundFI.treeIndex += treeIndex;
-      foundFI.averageTreeIndex = foundFI.treeIndex / foundFI.FScore;
+      foundFI.averageTreeIndex = foundFI.treeIndex / foundFI.fScore;
       foundFI.splitValueHistogram.merge(featureInteraction.splitValueHistogram);
     }
     
@@ -890,9 +891,9 @@ public class XGBoostModel extends Model<XGBoostModel, XGBoostModel.XGBoostParame
       foundFI.hasLeafStatistics = true;
     }
     
-    CollectFeatureInteractions(leftChild, new ArrayList<>(interactionPath), currentGain, currentGain, ppl,
+    collectFeatureInteractions(leftChild, new ArrayList<>(interactionPath), currentGain, currentGain, ppl,
             depth + 1, deepening, featureInteractions, memo, maxInteractionDepth, maxTreeDepth, maxDeepening, treeIndex);
-    CollectFeatureInteractions(node.getRightChild(), new ArrayList<>(interactionPath), currentGain, currentGain, ppr,
+    collectFeatureInteractions(node.getRightChild(), new ArrayList<>(interactionPath), currentGain, currentGain, ppr,
             depth + 1, deepening, featureInteractions, memo, maxInteractionDepth, maxTreeDepth, maxDeepening, treeIndex);
   }
   

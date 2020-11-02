@@ -15,15 +15,15 @@ public class FeatureInteractions extends HashMap<String, FeatureInteraction> {
                 FeatureInteraction rightFeatureInteraction = currEntry.getValue();
                 leftFeatureInteraction.gain += rightFeatureInteraction.gain;
                 leftFeatureInteraction.cover += rightFeatureInteraction.cover;
-                leftFeatureInteraction.FScore += rightFeatureInteraction.FScore;
-                leftFeatureInteraction.FScoreWeighted += rightFeatureInteraction.FScoreWeighted;
-                leftFeatureInteraction.averageFScoreWeighted = leftFeatureInteraction.FScoreWeighted / leftFeatureInteraction.FScore;
-                leftFeatureInteraction.averageGain = leftFeatureInteraction.gain / leftFeatureInteraction.FScore;
+                leftFeatureInteraction.fScore += rightFeatureInteraction.fScore;
+                leftFeatureInteraction.fScoreWeighted += rightFeatureInteraction.fScoreWeighted;
+                leftFeatureInteraction.averageFScoreWeighted = leftFeatureInteraction.fScoreWeighted / leftFeatureInteraction.fScore;
+                leftFeatureInteraction.averageGain = leftFeatureInteraction.gain / leftFeatureInteraction.fScore;
                 leftFeatureInteraction.expectedGain += rightFeatureInteraction.expectedGain;
                 leftFeatureInteraction.treeIndex += rightFeatureInteraction.treeIndex;
-                leftFeatureInteraction.averageTreeIndex = leftFeatureInteraction.treeIndex / leftFeatureInteraction.FScore;
+                leftFeatureInteraction.averageTreeIndex = leftFeatureInteraction.treeIndex / leftFeatureInteraction.fScore;
                 leftFeatureInteraction.treeDepth += rightFeatureInteraction.treeDepth;
-                leftFeatureInteraction.averageTreeDepth = leftFeatureInteraction.treeDepth / leftFeatureInteraction.FScore;
+                leftFeatureInteraction.averageTreeDepth = leftFeatureInteraction.treeDepth / leftFeatureInteraction.fScore;
                 leftFeatureInteraction.sumLeafCoversRight += rightFeatureInteraction.sumLeafCoversRight;
                 leftFeatureInteraction.sumLeafCoversLeft += rightFeatureInteraction.sumLeafCoversLeft;
                 leftFeatureInteraction.sumLeafValuesRight += rightFeatureInteraction.sumLeafValuesRight;
@@ -42,11 +42,9 @@ public class FeatureInteractions extends HashMap<String, FeatureInteraction> {
     public TwoDimTable[] getFeatureInteractions() {
         int maxDepth = maxDepth();
         TwoDimTable[] twoDimTables = new TwoDimTable[maxDepth + 1];
-
         for (int depth = 0; depth < maxDepth + 1; depth++) {
             twoDimTables[depth] = constructFeatureInteractionsTable(depth);
         }
-        
         return twoDimTables;
     }
     
@@ -79,25 +77,18 @@ public class FeatureInteractions extends HashMap<String, FeatureInteraction> {
 
         List<FeatureInteraction> featureInteractions = getFeatureInteractionsOfDepth(depth);
         int numRows = featureInteractions.size();
-
         List<FeatureInteraction> gainSorted = new ArrayList(featureInteractions);
         gainSorted.sort(Comparator.comparing(entry -> -entry.gain));
-
         List<FeatureInteraction> fScoreSorted = new ArrayList(featureInteractions);
-        fScoreSorted.sort(Comparator.comparing(entry -> -entry.FScore));
-
+        fScoreSorted.sort(Comparator.comparing(entry -> -entry.fScore));
         List<FeatureInteraction> fScoreWeightedSorted = new ArrayList(featureInteractions);
-        fScoreWeightedSorted.sort(Comparator.comparing(entry -> -entry.FScoreWeighted));
-
+        fScoreWeightedSorted.sort(Comparator.comparing(entry -> -entry.fScoreWeighted));
         List<FeatureInteraction> averagefScoreWeightedSorted = new ArrayList(featureInteractions);
         averagefScoreWeightedSorted.sort(Comparator.comparing(entry -> -entry.averageFScoreWeighted));
-
         List<FeatureInteraction> averageGainSorted = new ArrayList(featureInteractions);
         averageGainSorted.sort(Comparator.comparing(entry -> -entry.averageGain));
-
         List<FeatureInteraction> expectedGainSorted = new ArrayList(featureInteractions);
         expectedGainSorted.sort(Comparator.comparing(entry -> -entry.expectedGain));
-        
 
         TwoDimTable table = new TwoDimTable(
           "Interaction Depth " + depth, null,
@@ -111,8 +102,8 @@ public class FeatureInteractions extends HashMap<String, FeatureInteraction> {
             String name = featureInteractions.get(i).name;
             table.set(i, 0, name);
             table.set(i, 1, featureInteractions.get(i).gain);
-            table.set(i, 2, featureInteractions.get(i).FScore);
-            table.set(i, 3, featureInteractions.get(i).FScoreWeighted);
+            table.set(i, 2, featureInteractions.get(i).fScore);
+            table.set(i, 3, featureInteractions.get(i).fScoreWeighted);
             table.set(i, 4, featureInteractions.get(i).averageFScoreWeighted);
             table.set(i, 5, featureInteractions.get(i).averageGain);
             table.set(i, 6, featureInteractions.get(i).expectedGain);
@@ -136,7 +127,6 @@ public class FeatureInteractions extends HashMap<String, FeatureInteraction> {
         return table;
     }
 
-
     int indexOfInteractionWithName(String name, List<FeatureInteraction> featureInteractions) {
         for (int i = 0; i < featureInteractions.size(); i++)
             if (featureInteractions.get(i).name == name)
@@ -144,7 +134,6 @@ public class FeatureInteractions extends HashMap<String, FeatureInteraction> {
         
         return -1;
     }
-    
 
     public TwoDimTable getLeafStatisticsTable() {
         String[] colHeaders = new String[] {"Interaction", "Sum Leaf Values Left", "Sum Leaf Values Right", "Sum Leaf Covers Left", "Sum Leaf Covers Right"};

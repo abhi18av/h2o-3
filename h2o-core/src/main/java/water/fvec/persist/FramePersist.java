@@ -48,8 +48,7 @@ public class FramePersist {
     }
 
     public Job<Frame> saveTo(String uri, boolean overwrite) {
-        uri = sanitizeUri(uri);
-        URI metaUri = getMetaUri(frame._key, uri);
+        URI metaUri = getMetaUri(frame._key, sanitizeUri(uri));
         if (exists(metaUri) && !overwrite) {
             throw new IllegalArgumentException("File already exists at " + metaUri);
         }
@@ -115,8 +114,7 @@ public class FramePersist {
     }
 
     public static Job<Frame> loadFrom(Key<Frame> key, String uri) {
-        uri = sanitizeUri(uri);
-        URI metaUri = getMetaUri(key, uri);
+        URI metaUri = getMetaUri(key, sanitizeUri(uri));
         FrameMeta meta = read(metaUri, AutoBuffer::get);
         if (meta.numNodes != H2O.CLOUD.size()) {
             throw new IllegalArgumentException("To load this frame a cluster with " + meta.numNodes + " nodes is needed.");

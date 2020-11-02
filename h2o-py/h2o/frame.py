@@ -2209,7 +2209,7 @@ class H2OFrame(Keyed):
         H2OJob(h2o.api(
             "POST /3/Frames/%s/save" % self.frame_id, 
             data={"dir": path, "force": force}
-        ), "Save frame data")
+        ), "Save frame data").poll()
 
     def __getitem__(self, item):
         """

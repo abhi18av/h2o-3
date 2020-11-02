@@ -1527,7 +1527,7 @@ def load_frame(frame_id, path, force=True):
     H2OJob(api(
         "POST /3/Frames/load",
         data={"frame_id": frame_id, "dir": path, "force": force}
-    ), "Load frame data")
+    ), "Load frame data").poll()
     return get_frame(frame_id)
 
 

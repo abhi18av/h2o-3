@@ -41,6 +41,11 @@ class PersistUtils {
             throw new RuntimeException("Failed to write to " + uri, e);
         }
     }
+    
+    static boolean exists(URI uri) {
+        final Persist persist = H2O.getPM().getPersistForURI(uri);
+        return persist.exists(uri.toString());
+    }
 
     interface Reader<T> {
         T read(AutoBuffer ab);

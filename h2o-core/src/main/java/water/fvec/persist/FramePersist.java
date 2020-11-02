@@ -1,5 +1,6 @@
 package water.fvec.persist;
 
+import jsr166y.CountedCompleter;
 import water.*;
 import water.fvec.Chunk;
 import water.fvec.Frame;
@@ -11,7 +12,7 @@ import java.net.URI;
 import static water.fvec.persist.PersistUtils.*;
 
 public class FramePersist {
-    
+
     static {
         TypeMap.onIce(FrameMeta.class.getName());
     }
@@ -21,18 +22,20 @@ public class FramePersist {
     public FramePersist(Frame frame) {
         this.frame = frame;
     }
-    
+
     private static class FrameMeta extends Iced<FrameMeta> {
         Key<Frame> key;
         String[] names;
-        Key<Vec>[] keys;
         Vec[] vecs;
-        
+        long[] espc;
+        int numNodes;
+
         FrameMeta(Frame f) {
             key = f._key;
             names = f.names();
-            keys = f.keys();
             vecs = f.vecs();
+            espc = f.anyVec().espc();
+            numNodes = H2O.CLOUD.size();
         }
     }
 
@@ -41,16 +44,54 @@ public class FramePersist {
     }
 
     private static URI getDataUri(String metaUri, int cidx) {
-        return FileUtils.getURI(metaUri + "_" + H2O.SELF.index() + "_" + cidx);
+        return FileUtils.getURI(metaUri + "_n" + H2O.SELF.index() + "_c" + cidx);
     }
 
-    public void saveTo(String uri) {
+    public Job<Frame> saveTo(String uri, boolean overwrite) {
         uri = sanitizeUri(uri);
         URI metaUri = getMetaUri(frame._key, uri);
+        if (exists(metaUri) && !overwrite) {
+            throw new IllegalArgumentException("File already exists at " + metaUri);
+        }
         write(metaUri, ab -> {
             ab.put(new FrameMeta(frame));
         });
-        new SaveChunksTask(metaUri.toString()).doAll(frame).join();
+        Job<Frame> job = new Job<>(frame._key, "water.fvec.Frame", "Save frame");
+        return job.start(new SaveFrameDriver(job, frame, metaUri), 1);
+    }
+
+    public static class SaveFrameDriver extends H2O.H2OCountedCompleter<LoadFrameDriver> {
+
+        private final Job<Frame> job;
+        private final Frame frame;
+        private final URI metaUri;
+
+        public SaveFrameDriver(
+            Job<Frame> job, Frame frame,
+            URI metaUri
+        ) {
+            this.job = job;
+            this.frame = frame;
+            this.metaUri = metaUri;
+        }
+
+        @Override
+        public void compute2() {
+            frame.read_lock(job._key);
+            new SaveChunksTask(metaUri.toString()).doAll(frame).join();
+            tryComplete();
+        }
+
+        @Override
+        public void onCompletion(CountedCompleter caller) {
+            frame.unlock(job);
+        }
+
+        @Override
+        public boolean onExceptionalCompletion(Throwable t, CountedCompleter caller) {
+            frame.unlock(job);
+            return super.onExceptionalCompletion(t, caller);
+        }
     }
 
     static class SaveChunksTask extends MRTask<SaveChunksTask> {
@@ -73,16 +114,52 @@ public class FramePersist {
         }
     }
 
-    public static Frame loadFrom(Key<Frame> key, String uri) {
+    public static Job<Frame> loadFrom(Key<Frame> key, String uri) {
         uri = sanitizeUri(uri);
         URI metaUri = getMetaUri(key, uri);
         FrameMeta meta = read(metaUri, AutoBuffer::get);
-        Vec con = Vec.makeConN(meta.vecs[0].length(), meta.vecs[0].nChunks());
-        new LoadChunksTask(metaUri.toString(), meta.vecs).doAll(con);
-        for (Vec v : meta.vecs) DKV.put(v);
-        Frame frame = new Frame(meta.key, meta.names, meta.vecs);
-        DKV.put(frame);
-        return frame;
+        if (meta.numNodes != H2O.CLOUD.size()) {
+            throw new IllegalArgumentException("To load this frame a cluster with " + meta.numNodes + " nodes is needed.");
+        }
+        Job<Frame> job = new Job<>(meta.key, "water.fvec.Frame", "Load frame");
+        return job.start(new LoadFrameDriver(metaUri.toString(), meta), 1);
+    }
+
+    public static class LoadFrameDriver extends H2O.H2OCountedCompleter<LoadFrameDriver> {
+
+        private final String metaUri;
+        private final FrameMeta meta;
+
+        public LoadFrameDriver(
+            String metaUri, FrameMeta meta
+        ) {
+            this.metaUri = metaUri;
+            this.meta = meta;
+        }
+
+        @Override
+        public void compute2() {
+            Vec con = null;
+            try {
+                long nrow = meta.espc[meta.espc.length-1];
+                int nchunk = meta.espc.length-1;
+                con = Vec.makeConN(nrow, nchunk);
+                new LoadChunksTask(metaUri, meta.vecs).doAll(con).join();
+            } finally {
+                if (con != null) con.remove();
+            }
+            Futures fs = new Futures();
+            int rowLayout = Vec.ESPC.rowLayout(meta.vecs[0]._key, meta.espc);
+            for (Vec v : meta.vecs) {
+                v._rowLayout = rowLayout;
+                DKV.put(v, fs);
+            }
+            fs.blockForPending();
+            Frame frame = new Frame(meta.key, meta.names, meta.vecs);
+            DKV.put(frame);
+            tryComplete();
+        }
+
     }
 
     static class LoadChunksTask extends MRTask<LoadChunksTask> {
@@ -102,10 +179,13 @@ public class FramePersist {
 
         private int readChunks(AutoBuffer autoBuffer, int cidx) {
             for (Vec v : vecs) {
-                DKV.put(v.chunkKey(cidx), new Value(v.chunkKey(cidx), autoBuffer.get()));
+                Key chunkKey = v.chunkKey(cidx);
+                Chunk chunk = autoBuffer.get();
+                DKV.put(chunkKey, new Value(chunkKey, chunk));
             }
             return vecs.length;
         }
+
     }
 
 }

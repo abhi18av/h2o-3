@@ -33,15 +33,17 @@ public class FramePersistTest {
     public void testSaveAndLoadDouble() throws IOException {
         Scope.enter();
         try {
-            Vec v = Scope.track(createRandomDoubleVec(10_000, 42));
+            Vec v = Scope.track(createRandomDoubleVec(20, 42));
             DKV.put(v);
             Frame f = Scope.track(new Frame(Key.make(), new Vec[] { v }));
+            DKV.put(f);
             TwoDimTable origData = f.toTwoDimTable(0, (int) v.length(), false);
             File dest = temp.newFolder();
-            new FramePersist(f).saveTo(dest.getAbsolutePath());
+            new FramePersist(f).saveTo(dest.getAbsolutePath(), false).get();
             f.remove(true);
-            Scope.track(FramePersist.loadFrom(f._key, dest.getAbsolutePath()));
+            Frame returned = Scope.track(FramePersist.loadFrom(f._key, dest.getAbsolutePath()).get());
             Frame loaded = DKV.get(f._key).get();
+            assertEquals(returned._key, loaded._key);
             TwoDimTable loadedData = loaded.toTwoDimTable(0, (int) loaded.numRows(), false);
             assertTwoDimTableEquals(origData, loadedData);
         } finally {
@@ -56,11 +58,12 @@ public class FramePersistTest {
             Vec v = Scope.track(createRandomCategoricalVec(10_000, 42));
             DKV.put(v);
             Frame f = Scope.track(new Frame(Key.make(), new Vec[] { v }));
+            DKV.put(f);
             TwoDimTable origData = f.toTwoDimTable(0, (int) v.length(), false);
             File dest = temp.newFolder();
-            new FramePersist(f).saveTo(dest.getAbsolutePath());
+            new FramePersist(f).saveTo(dest.getAbsolutePath(), false).get();
             f.remove(true);
-            Scope.track(FramePersist.loadFrom(f._key, dest.getAbsolutePath()));
+            Scope.track(FramePersist.loadFrom(f._key, dest.getAbsolutePath()).get());
             Frame loaded = DKV.get(f._key).get();
             TwoDimTable loadedData = loaded.toTwoDimTable(0, (int) loaded.numRows(), false);
             assertTwoDimTableEquals(origData, loadedData);
@@ -79,9 +82,9 @@ public class FramePersistTest {
             long origNrow = f.numRows();
             TwoDimTable origData = f.toTwoDimTable(0, (int) f.numRows(), false);
             File dest = temp.newFolder();
-            new FramePersist(f).saveTo(dest.getAbsolutePath());
+            new FramePersist(f).saveTo(dest.getAbsolutePath(), false).get();
             f.remove(true);
-            Scope.track(FramePersist.loadFrom(f._key, dest.getAbsolutePath()));
+            Scope.track(FramePersist.loadFrom(f._key, dest.getAbsolutePath()).get());
             Frame loaded = DKV.get(f._key).get();
             TwoDimTable loadedData = loaded.toTwoDimTable(0, (int) loaded.numRows(), false);
             assertArrayEquals(origNames, loaded._names);

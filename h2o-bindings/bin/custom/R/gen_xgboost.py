@@ -37,7 +37,10 @@ h2o.xgboost.available <- function() {
 #' \dontrun{
 #' library(h2o)
 #' h2o.init()
-#' boston <- h2o.importFile("https://s3.amazonaws.com/h2o-public-test-data/smalldata/gbm_test/BostonHousing.csv", destination_frame="boston")
+#' boston <- h2o.importFile(
+#'        "https://s3.amazonaws.com/h2o-public-test-data/smalldata/gbm_test/BostonHousing.csv",
+#'         destination_frame="boston"
+#'         )
 #' boston_xgb <- h2o.xgboost(training_frame = boston, y = "medv", seed = 1234)
 #' feature_interactions <- h2o.xgboost.feature_interaction(boston_xgb)
 #' }
